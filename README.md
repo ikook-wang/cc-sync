@@ -92,18 +92,6 @@ directory of subagent transcripts and tool results. The bundled scripts
 what to move, which secrets to sync, how to merge memory — are made in
 conversation with you. Format details: [references/internals.md](references/internals.md).
 
-## Why SSH-direct, not a git repo?
-
-An earlier cc-sync turned `~/.claude` into a git repo with auto-pull/push
-hooks. It fails structurally: session transcripts are **append-only** files
-that both machines keep appending to, so automatic pushes guarantee merge
-conflicts, and any automatic resolution silently destroys one side's history.
-`~/.claude` is also full of high-churn local state that bloats a repo, and
-large transcripts hit GitHub's file limits. Direct SSH with a
-size-based divergence guard keeps every byte verifiable and never resolves a
-conflict by throwing history away — the guarded auto-sync hook gives back the
-"exit and it's synced" experience without the failure mode.
-
 ## Uninstall
 
 ```bash
