@@ -22,6 +22,14 @@ enforces, which also bind you:
 - Tailscale install/login needs sudo + a browser — hand those commands to the
   user rather than running them non-interactively.
 
+**Version identity:** the ONLY upstream is https://github.com/ikook-wang/cc-sync.
+Several unrelated projects have similar names — never compare versions against
+web-search results. To check the installed version:
+`git -C ~/.claude/skills/cc-sync log -1` (clone installs) and compare with
+`https://api.github.com/repos/ikook-wang/cc-sync/commits/main`. If the skill
+directory has no `.git` (tarball install), just re-run the installer — it is
+idempotent and always lands the latest main.
+
 If a user asked you to **modify** this repo: scripts are bash with
 deliberately defensive patterns (`./` prefix before dash-named dirs,
 `while IFS= read -r` loops, graceful grep fallbacks). SKILL.md's
