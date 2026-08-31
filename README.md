@@ -1,10 +1,11 @@
-# claude-session-migrate
+# cc-sync
 
 [中文文档](README.zh-CN.md)
 
-A [Claude Code](https://claude.com/claude-code) skill that migrates your
-sessions between machines over SSH — so you can leave your desk, open your
-laptop, and `claude --resume` right where you left off.
+Sync [Claude Code](https://claude.com/claude-code) sessions and config between
+machines over SSH — leave your desk, open your laptop, and `claude --resume`
+right where you left off. Ships as a Claude Code skill: you talk, Claude
+orchestrates, you pick what moves.
 
 Claude Code stores every session on the machine it ran on
 (`~/.claude/projects/…`). Switch computers and your conversations, subagent
@@ -15,19 +16,23 @@ doesn't carry.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ikook-wang/claude-session-migrate/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ikook-wang/cc-sync/main/install.sh | bash
 ```
 
 The installer:
 
-1. places the skill in `~/.claude/skills/session-migrate` (re-run to update);
+1. places the skill in `~/.claude/skills/cc-sync` (re-run to update);
 2. detects **Tailscale** and offers to install it if missing — optional, but it
-   makes cross-network migration (office ↔ home) work exactly like LAN SSH.
+   makes cross-network migration (office ↔ home) work exactly like LAN SSH;
+3. optionally configures a **default peer** (`~/.claude/cc-sync.conf`) and a
+   `SessionEnd` hook that **auto-syncs each session to that peer when it
+   ends** — silent, divergence-guarded, and an offline peer never blocks
+   anything. (`CC_SYNC_PEER=user@host bash install.sh` for non-interactive.)
 
 Or install manually:
 
 ```bash
-git clone https://github.com/ikook-wang/claude-session-migrate ~/.claude/skills/session-migrate
+git clone https://github.com/ikook-wang/cc-sync ~/.claude/skills/cc-sync
 ```
 
 ## Use
@@ -46,6 +51,11 @@ Claude walks a four-phase flow, asking you to pick what moves:
 | **List / pick / sync** | Enumerate recent sessions across the workspace *and subdirectory projects*, you choose, each is copied (transcript + subagent side-directory) and verified with sha256 |
 | **Dependency audit** | Extract the session's footprint → check repo HEAD parity, hunt gitignored secrets that build/release scripts need, rsync non-git artifact dirs, verify toolchains |
 | **Memory merge** | Merge `MEMORY.md` indexes without losing either side; remote gets a backup first |
+
+Also on request: **config sync** (CLAUDE.md, commands/, skills/ — with
+settings.json diffed and merged, never blindly overwritten). And with
+auto-sync enabled, day-to-day use needs no commands at all: end a session,
+it's already on the other machine.
 
 ### Safety guarantees
 
@@ -82,11 +92,26 @@ directory of subagent transcripts and tool results. The bundled scripts
 what to move, which secrets to sync, how to merge memory — are made in
 conversation with you. Format details: [references/internals.md](references/internals.md).
 
+## Why SSH-direct, not a git repo?
+
+An earlier cc-sync turned `~/.claude` into a git repo with auto-pull/push
+hooks. It fails structurally: session transcripts are **append-only** files
+that both machines keep appending to, so automatic pushes guarantee merge
+conflicts, and any automatic resolution silently destroys one side's history.
+`~/.claude` is also full of high-churn local state that bloats a repo, and
+large transcripts hit GitHub's file limits. Direct SSH with a
+size-based divergence guard keeps every byte verifiable and never resolves a
+conflict by throwing history away — the guarded auto-sync hook gives back the
+"exit and it's synced" experience without the failure mode.
+
 ## Uninstall
 
 ```bash
-rm -rf ~/.claude/skills/session-migrate
+bash ~/.claude/skills/cc-sync/uninstall.sh
 ```
+
+Removes the skill, the auto-sync hook, and the config. Synced data is never
+touched.
 
 ## License
 

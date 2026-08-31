@@ -1,23 +1,27 @@
 ---
-name: session-migrate
+name: cc-sync
 description: >
-  Migrate Claude Code sessions between machines over SSH — enumerate recent
-  sessions across a workspace and its subdirectory project slots, let the user
-  pick, copy transcripts with side directories, verify integrity, audit
-  repo/secret/toolchain dependencies on the target, and merge memory indexes.
+  Sync Claude Code sessions and config between machines over SSH — enumerate
+  recent sessions across a workspace and its subdirectory project slots, let
+  the user pick, copy transcripts with side directories, verify integrity,
+  audit repo/secret/toolchain dependencies on the target, merge memory
+  indexes, and optionally sync commands/skills/config. Supports a default
+  peer (~/.claude/cc-sync.conf) and a silent SessionEnd auto-sync hook.
   Use when the user wants to: (1) continue sessions on another machine
   (laptop/desktop/server), (2) list recently active sessions for a workspace,
   (3) sync session-generated artifacts and gitignored secrets to a second
-  machine, (4) merge memory directories after working on two machines.
-  Triggers on: "migrate session", "sync sessions", "会话迁移", "迁移会话",
-  "同步会话", "把会话搬到", "换电脑继续", "出差用笔记本继续".
+  machine, (4) merge memory directories after working on two machines,
+  (5) copy commands/skills/settings to another machine.
+  Triggers on: "cc-sync", "migrate session", "sync sessions", "会话迁移",
+  "迁移会话", "同步会话", "同步配置", "把会话搬到", "换电脑继续",
+  "出差用笔记本继续", "自动同步会话".
 ---
 
-# Session Migrate
+# cc-sync
 
-The skill directory (SKILL_DIR) is at `~/.claude/skills/session-migrate`.
+The skill directory (SKILL_DIR) is at `~/.claude/skills/cc-sync`.
 If that path doesn't exist, fall back to Glob with pattern
-`**/skills/**/session-migrate/SKILL.md` and derive the root from the result.
+`**/skills/**/cc-sync/SKILL.md` and derive the root from the result.
 
 ## Task
 
@@ -26,6 +30,10 @@ seamlessly there. Four phases — each can be skipped independently if the user
 only needs part of the flow. You orchestrate and exercise judgment; the bundled
 scripts do only the mechanical parts. The user always picks which sessions to
 move — never pick for them.
+
+If the user names no target machine, read `~/.claude/cc-sync.conf` — its
+`DEFAULT_PEER=user@host` line is the configured peer. No conf and no target →
+ask.
 
 ## How sessions are stored
 
@@ -136,6 +144,31 @@ For each slot that has `memory/` locally, check the remote side:
   `## Earlier memories` section. **Never drop an entry.** If an individual
   file does collide, keep the newer one and say so.
 
+## Config sync (on request)
+
+When the user also wants their Claude Code *setup* on the other machine (not
+just sessions), sync these — judgment applies to each:
+
+- `~/.claude/CLAUDE.md`, `~/.claude/commands/`, `~/.claude/skills/` — usually
+  safe to `rsync -a` wholesale. **Resolve symlinks first** (`rsync -aL` or
+  copy the link target): skills/commands are often symlinked into a dotfiles
+  or brain repo, and a dangling link on the target is worse than a copy.
+- `~/.claude/settings.json` — machine-specific (paths, sounds, hooks that
+  reference local files). Never overwrite blindly: diff both sides, show the
+  user, merge only the keys they want.
+- Credentials/keychain never travel — the target machine's own `claude` login
+  is used. Do not copy `.credentials.json`.
+
+## Auto-sync (optional, installed by install.sh)
+
+If the user opted in, a `SessionEnd` hook runs `scripts/auto-sync.sh`: every
+time a session ends, its transcript + side directory are pushed to
+`DEFAULT_PEER`, silently. It uses the same divergence guard (a larger peer
+copy wins → skip) and exits quietly on any failure — an offline peer never
+blocks or noises up a session. A skipped/failed auto-sync is healed by the
+next one, or by running Phase 1 manually. To set it up later:
+re-run `install.sh` (or `CC_SYNC_PEER=user@host bash install.sh`).
+
 ## Phase 4 — Final sync & discipline
 
 The session driving this migration keeps growing after every sync. Before the
@@ -170,4 +203,6 @@ Rules to state in the final report:
 | `scripts/list-sessions.sh` | Enumerate sessions for a project + subdirectory slots → TSV. `--remote user@host` runs it on the target via `ssh bash -s` (zero deployment). |
 | `scripts/sync-session.sh` | Copy one session (transcript + side dir) with divergence guard and sha256/count verification. Exit 0/2/3. |
 | `scripts/audit-deps.sh` | Extract a session's footprint (CWD distribution, files written) as classified TSV. Local only. |
+| `scripts/auto-sync.sh` | SessionEnd hook target: silent, divergence-guarded push of the just-ended session to DEFAULT_PEER. |
+| `uninstall.sh` | Remove skill + auto-sync hook + conf; synced data is never touched. |
 | `references/internals.md` | Observed storage format notes (slot naming, record types, versions). Read when debugging extraction or after a Claude Code upgrade changes behavior. |

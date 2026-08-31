@@ -1,9 +1,10 @@
-# claude-session-migrate
+# cc-sync
 
 [English](README.md)
 
-一个 [Claude Code](https://claude.com/claude-code) 技能：通过 SSH 把你的会话
-在多台电脑之间迁移——离开工位、打开笔记本，`claude --resume` 无缝接着聊。
+通过 SSH 在多台电脑之间同步 [Claude Code](https://claude.com/claude-code)
+的会话和配置——离开工位、打开笔记本，`claude --resume` 无缝接着聊。
+以 Claude Code 技能形态交付：你说话，Claude 编排，迁什么由你挑。
 
 Claude Code 的每个会话都存在它运行的那台机器上（`~/.claude/projects/…`）。
 换台电脑，你的对话、子智能体记录、计划文档、自动记忆就全留在原地了。
@@ -12,19 +13,22 @@ Claude Code 的每个会话都存在它运行的那台机器上（`~/.claude/pro
 ## 安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ikook-wang/claude-session-migrate/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ikook-wang/cc-sync/main/install.sh | bash
 ```
 
-安装器做两件事：
+安装器做三件事：
 
-1. 把技能装进 `~/.claude/skills/session-migrate`（重复运行即更新）；
+1. 把技能装进 `~/.claude/skills/cc-sync`（重复运行即更新）；
 2. 检测 **Tailscale**，没装就问你要不要装——可选，但装上之后跨网络迁移
-   （公司 ↔ 家里）和局域网 SSH 完全一样。
+   （公司 ↔ 家里）和局域网 SSH 完全一样；
+3. 可选配置**默认配对机**（`~/.claude/cc-sync.conf`）和一个 `SessionEnd`
+   钩子——**每个会话结束时自动同步到配对机**：静默、带分叉守卫、对端离线
+   也绝不阻塞。（非交互安装：`CC_SYNC_PEER=user@host bash install.sh`。）
 
 也可以手动安装：
 
 ```bash
-git clone https://github.com/ikook-wang/claude-session-migrate ~/.claude/skills/session-migrate
+git clone https://github.com/ikook-wang/cc-sync ~/.claude/skills/cc-sync
 ```
 
 ## 使用
@@ -43,6 +47,10 @@ Claude 会走一套四阶段流程，迁哪些会话由你挑选：
 | **列表 / 挑选 / 同步** | 枚举工作区**及其子目录项目**的近期会话，你来挑，逐个复制（转录 + 子智能体附属目录）并用 sha256 校验 |
 | **依赖审计** | 提取会话足迹 → 核对仓库 HEAD、倒推构建/发布脚本依赖的 gitignore 密钥、整体同步非 git 产物目录、检查工具链 |
 | **记忆合并** | 合并 `MEMORY.md` 索引，两边条目都保留；改写远端前先备份 |
+
+另外还支持：**配置同步**（CLAUDE.md、commands/、skills/——settings.json
+先 diff 再选择性合并，绝不盲目覆盖）。开启自动同步后，日常使用零命令：
+会话一结束，另一台机器上就已经有了。
 
 ### 安全保证
 
@@ -72,11 +80,23 @@ Claude 会走一套四阶段流程，迁哪些会话由你挑选：
 校验和足迹提取；判断性工作——迁什么、哪些密钥要同步、记忆怎么合并——
 在与你的对话中完成。格式细节见 [references/internals.md](references/internals.md)。
 
+## 为什么用 SSH 直连而不是 git 仓库？
+
+早期版本的 cc-sync 把 `~/.claude` 整个变成 git 仓库，用钩子自动 pull/push。
+这在结构上就走不通：会话转录是**追加式**文件，两台机器都在往同一个文件追加，
+自动 push 必然产生合并冲突，而任何自动解决策略都会静默毁掉其中一边的历史。
+此外 `~/.claude` 里堆满高频变动的本地状态，仓库会不断膨胀，大转录文件还会
+撞上 GitHub 的体积限制。SSH 直连 + 基于大小的分叉守卫让每个字节都可校验、
+绝不用丢历史的方式解决冲突——带守卫的自动同步钩子则把「退出即同步」的体验
+找了回来，且没有那个致命故障模式。
+
 ## 卸载
 
 ```bash
-rm -rf ~/.claude/skills/session-migrate
+bash ~/.claude/skills/cc-sync/uninstall.sh
 ```
+
+删除技能、自动同步钩子和配置文件；已同步的数据绝不动。
 
 ## 协议
 
