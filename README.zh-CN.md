@@ -12,6 +12,14 @@ Claude Code 的每个会话都存在它运行的那台机器上（`~/.claude/pro
 
 ## 安装
 
+**零成本方式**——把一句话粘贴给任意 Claude Code 会话：
+
+> 帮我安装并配置 https://github.com/ikook-wang/cc-sync ，然后把最近的会话同步到 `user@host`
+
+AI 会读这份 README 自己完成剩下的事（给它的指引在下方）。
+
+也可以自己跑安装器：
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ikook-wang/cc-sync/main/install.sh | bash
 ```
@@ -30,6 +38,25 @@ curl -fsSL https://raw.githubusercontent.com/ikook-wang/cc-sync/main/install.sh 
 ```bash
 git clone https://github.com/ikook-wang/cc-sync ~/.claude/skills/cc-sync
 ```
+
+### 给 AI 智能体的指引
+
+如果用户让你安装或使用 cc-sync，按以下步骤执行：
+
+1. **安装**：运行 `curl -fsSL https://raw.githubusercontent.com/ikook-wang/cc-sync/main/install.sh | bash`。
+   无终端环境下 Tailscale 和自动同步的询问会自动跳过——这是安全的预期行为。
+2. **验证**：确认 `~/.claude/skills/cc-sync/SKILL.md` 存在，并用
+   `bash ~/.claude/skills/cc-sync/scripts/list-sessions.sh "$PWD" 20`
+   冒烟测试能列出当前项目的近期会话。
+3. **使用**：阅读 `~/.claude/skills/cc-sync/SKILL.md` 并照做——它是完整的
+   操作手册（预检 → 列表/挑选/同步 → 依赖审计 → 记忆合并）。如果你的环境
+   已加载 `cc-sync` 技能，直接调用即可。绝不替用户挑会话，永远先展示列表。
+4. **配置（可选）**：向用户询问配对机（`user@host`，Tailscale 主机名可用）。
+   要开启会话结束自动同步，运行
+   `CC_SYNC_PEER=<user@host> bash ~/.claude/skills/cc-sync/install.sh`。
+5. **交还需要人的部分**：Tailscale 的安装登录需要 sudo 和浏览器——把确切
+   命令交给用户亲手执行（`brew install --cask tailscale-app`，然后打开 App
+   登录），不要在非交互环境里硬试。
 
 ## 使用
 

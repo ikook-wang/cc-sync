@@ -15,6 +15,14 @@ doesn't carry.
 
 ## Install
 
+**The zero-effort way** — paste one sentence into any Claude Code session:
+
+> Install and set up cc-sync from https://github.com/ikook-wang/cc-sync, then sync my recent sessions to `user@host`.
+
+Your AI reads this README and does the rest (instructions for it are below).
+
+Or run the installer yourself:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ikook-wang/cc-sync/main/install.sh | bash
 ```
@@ -34,6 +42,28 @@ Or install manually:
 ```bash
 git clone https://github.com/ikook-wang/cc-sync ~/.claude/skills/cc-sync
 ```
+
+### For AI agents
+
+If a user asked you to install or use cc-sync, follow these steps:
+
+1. **Install:** run `curl -fsSL https://raw.githubusercontent.com/ikook-wang/cc-sync/main/install.sh | bash`.
+   Without a terminal the Tailscale/auto-sync prompts skip themselves — that
+   is fine and safe.
+2. **Verify:** `~/.claude/skills/cc-sync/SKILL.md` exists, and
+   `bash ~/.claude/skills/cc-sync/scripts/list-sessions.sh "$PWD" 20`
+   prints the current project's recent sessions.
+3. **Operate:** read `~/.claude/skills/cc-sync/SKILL.md` and follow it — it is
+   the full operating manual (preflight → list/pick/sync → dependency audit →
+   memory merge). If your environment has already loaded the `cc-sync` skill,
+   just invoke it. Never pick sessions for the user; always show the list.
+4. **Configure (optional):** ask the user for their peer (`user@host`; Tailscale
+   hostnames work). To enable auto-sync on session end, run
+   `CC_SYNC_PEER=<user@host> bash ~/.claude/skills/cc-sync/install.sh`.
+5. **Hand back what needs a human:** Tailscale install/login requires sudo and
+   a browser — give the user the exact commands
+   (`brew install --cask tailscale-app`, then log in via the app) instead of
+   attempting them non-interactively.
 
 ## Use
 
